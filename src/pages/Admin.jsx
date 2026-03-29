@@ -16,7 +16,7 @@ const APPLIANCE_CATEGORIES = [
   'Other'
 ];
 
-const ADMIN_PASSWORD = (import.meta.env.VITE_ADMIN_PASSWORD ?? 'admin');
+const DEFAULT_ADMIN_PASSWORD = (import.meta.env.VITE_ADMIN_PASSWORD ?? 'admin');
 const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
 
 export default function Admin() {
@@ -25,6 +25,10 @@ export default function Admin() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loginForm, setLoginForm] = useState({ password: '' });
   const [loginError, setLoginError] = useState('');
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [changePasswordForm, setChangePasswordForm] = useState({ current: '', newPassword: '', confirm: '' });
+  const [changePasswordError, setChangePasswordError] = useState('');
+  const [changePasswordSuccess, setChangePasswordSuccess] = useState('');
 
   // Check if admin is already logged in
   useEffect(() => {
@@ -70,11 +74,15 @@ export default function Admin() {
     return () => clearInterval(interval);
   }, [isAuthenticated]);
 
+  const getAdminPassword = () => {
+    return localStorage.getItem('admin_password') || DEFAULT_ADMIN_PASSWORD;
+  };
+
   const handleLogin = (e) => {
     e.preventDefault();
     setLoginError('');
 
-    if (loginForm.password === ADMIN_PASSWORD) {
+    if (loginForm.password === getAdminPassword()) {
       localStorage.setItem('admin_authenticated', 'true');
       localStorage.setItem('admin_login_time', Date.now().toString());
       setIsAuthenticated(true);
@@ -83,6 +91,36 @@ export default function Admin() {
       setLoginError('Invalid password');
       setLoginForm({ password: '' });
     }
+  };
+
+  const handleChangePassword = (e) => {
+    e.preventDefault();
+    setChangePasswordError('');
+    setChangePasswordSuccess('');
+
+    if (changePasswordForm.current !== getAdminPassword()) {
+      setChangePasswordError('Current password is incorrect');
+      return;
+    }
+
+    if (!changePasswordForm.newPassword || changePasswordForm.newPassword.length < 6) {
+      setChangePasswordError('New password must be at least 6 characters');
+      return;
+    }
+
+    if (changePasswordForm.newPassword !== changePasswordForm.confirm) {
+      setChangePasswordError('Passwords do not match');
+      return;
+    }
+
+    localStorage.setItem('admin_password', changePasswordForm.newPassword);
+    setChangePasswordSuccess('Password changed successfully!');
+    setChangePasswordForm({ current: '', newPassword: '', confirm: '' });
+    
+    setTimeout(() => {
+      setShowChangePassword(false);
+      setChangePasswordSuccess('');
+    }, 2000);
   };
 
   const handleLogout = () => {
@@ -188,16 +226,119 @@ export default function Admin() {
           <h1 className="text-3xl font-bold text-foreground">Admin Dashboard</h1>
           <p className="text-muted-foreground">Manage your appliance inventory</p>
         </div>
-        <button
-          onClick={handleLogout}
-          className="btn-secondary flex items-center gap-2"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-          </svg>
-          Logout
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowChangePassword(true)}
+            className="btn-secondary flex items-center gap-2"
+            title="Change admin password"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+            </svg>
+            Change Password
+          </button>
+          <button
+            onClick={handleLogout}
+            className="btn-secondary flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+            Logout
+          </button>
+        </div>
       </div>
+
+      {showChangePassword && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="card p-6 w-full max-w-md space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold">Change Admin Password</h2>
+              <button
+                onClick={() => {
+                  setShowChangePassword(false);
+                  setChangePasswordError('');
+                  setChangePasswordSuccess('');
+                  setChangePasswordForm({ current: '', newPassword: '', confirm: '' });
+                }}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <form onSubmit={handleChangePassword} className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Current Password</label>
+                <input
+                  type="password"
+                  value={changePasswordForm.current}
+                  onChange={(e) => setChangePasswordForm({ ...changePasswordForm, current: e.target.value })}
+                  className="input w-full"
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">New Password</label>
+                <input
+                  type="password"
+                  value={changePasswordForm.newPassword}
+                  onChange={(e) => setChangePasswordForm({ ...changePasswordForm, newPassword: e.target.value })}
+                  className="input w-full"
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Confirm Password</label>
+                <input
+                  type="password"
+                  value={changePasswordForm.confirm}
+                  onChange={(e) => setChangePasswordForm({ ...changePasswordForm, confirm: e.target.value })}
+                  className="input w-full"
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
+
+              {changePasswordError && (
+                <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                  <p className="text-sm text-destructive">{changePasswordError}</p>
+                </div>
+              )}
+
+              {changePasswordSuccess && (
+                <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+                  <p className="text-sm text-green-600">{changePasswordSuccess}</p>
+                </div>
+              )}
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowChangePassword(false);
+                    setChangePasswordError('');
+                    setChangePasswordSuccess('');
+                    setChangePasswordForm({ current: '', newPassword: '', confirm: '' });
+                  }}
+                  className="btn-secondary flex-1"
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn-primary flex-1">
+                  Update Password
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <div className="card p-6">
         <h2 className="text-xl font-semibold mb-4">Add New Appliance</h2>
