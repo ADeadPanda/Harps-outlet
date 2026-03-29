@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams, Link } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import db from '@/lib/localDB';
 
 export default function ProductDetail() {
   const { id } = useParams();
-  const navigate = useNavigate();
   const [product, setProduct] = useState(null);
 
   useEffect(() => {
@@ -38,24 +37,15 @@ export default function ProductDetail() {
     );
   }
 
-  const handleDelete = async () => {
-    if (!window.confirm('Delete this product?')) return;
-    await db.entities.Appliance.delete(product.id);
-    navigate('/');
-  };
-
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
+      <div>
         <Link to="/" className="btn-secondary inline-flex items-center space-x-2">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
           </svg>
           <span>Back to Gallery</span>
         </Link>
-        <button onClick={handleDelete} className="btn-secondary bg-destructive text-destructive-foreground hover:bg-destructive/90">
-          Delete Product
-        </button>
       </div>
 
       <div className="card p-6">
