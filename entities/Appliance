@@ -1,0 +1,104 @@
+{
+  "name": "Appliance",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "title": "Name"
+    },
+    "category": {
+      "type": "string",
+      "title": "Category",
+      "enum": [
+        "Refrigerators",
+        "Washers & Dryers",
+        "Dishwashers",
+        "Ovens & Ranges",
+        "Microwaves",
+        "Air Conditioners",
+        "Small Appliances",
+        "Other"
+      ]
+    },
+    "price": {
+      "type": "number",
+      "title": "Price"
+    },
+    "description": {
+      "type": "string",
+      "title": "Description"
+    },
+    "images": {
+      "type": "array",
+      "title": "Images",
+      "items": {
+        "type": "string"
+      }
+    },
+    "brand": {
+      "type": "string",
+      "title": "Brand"
+    },
+    "model_number": {
+      "type": "string",
+      "title": "Model Number"
+    },
+    "dimensions_height": {
+      "type": "number",
+      "title": "Height (inches)"
+    },
+    "dimensions_width": {
+      "type": "number",
+      "title": "Width (inches)"
+    },
+    "dimensions_depth": {
+      "type": "number",
+      "title": "Depth (inches)"
+    },
+    "wattage": {
+      "type": "number",
+      "title": "Wattage"
+    },
+    "energy_rating": {
+      "type": "string",
+      "title": "Energy Rating",
+      "enum": [
+        "A+++",
+        "A++",
+        "A+",
+        "A",
+        "B",
+        "C",
+        "D"
+      ]
+    },
+    "color": {
+      "type": "string",
+      "title": "Color"
+    },
+    "weight": {
+      "type": "number",
+      "title": "Weight (lbs)"
+    },
+    "condition": {
+      "type": "string",
+      "title": "Condition",
+      "enum": [
+        "New",
+        "Refurbished",
+        "Used - Like New",
+        "Used - Good",
+        "Used - Fair"
+      ]
+    },
+    "featured": {
+      "type": "boolean",
+      "title": "Featured"
+    }
+  },
+  "required": [
+    "name",
+    "category",
+    "price"
+  ]
+}
