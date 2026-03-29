@@ -1,4 +1,5 @@
 const STORAGE_KEY = "harps_outlet_appliances";
+const API_URL = "/api.php";
 
 const safeJsonParse = (value, fallback) => {
   try {
@@ -7,6 +8,9 @@ const safeJsonParse = (value, fallback) => {
     return fallback;
   }
 };
+
+// Fallback to localStorage if server is down
+let useLocalStorage = false;
 
 const readStorage = () => {
   if (typeof window === "undefined") return [];
@@ -18,6 +22,40 @@ const readStorage = () => {
 const writeStorage = (items) => {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+};
+
+// API call with fallback
+const apiCall = async (action, method = 'GET', data = null, params = {}) => {
+  try {
+    const url = new URL(API_URL, window.location.origin);
+    url.searchParams.append('action', action);
+    
+    // Add params to query string
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        url.searchParams.append(key, value);
+      }
+    });
+    
+    const options = {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+    };
+    
+    if (data) {
+      options.body = JSON.stringify(data);
+    }
+    
+    const response = await fetch(url.toString(), options);
+    if (!response.ok) throw new Error(`API error: ${response.status}`);
+    
+    useLocalStorage = false; // Server is working
+    return await response.json();
+  } catch (error) {
+    console.warn('Server API failed, falling back to localStorage:', error);
+    useLocalStorage = true;
+    return null;
+  }
 };
 
 
@@ -41,6 +79,18 @@ const compareField = (a, b, field) => {
 };
 
 const listItems = async (sortBy = "", limit = null) => {
+  if (!useLocalStorage) {
+    const result = await apiCall('list', 'GET', null, { sortBy });
+    if (result !== null) {
+      let items = result;
+      if (limit != null) {
+        return items.slice(0, limit);
+      }
+      return items;
+    }
+  }
+  
+  // Fallback to localStorage
   const items = readStorage();
 
   let sorted = [...items];
@@ -57,6 +107,14 @@ const listItems = async (sortBy = "", limit = null) => {
 };
 
 const filterItems = async (query = {}) => {
+  if (!useLocalStorage) {
+    const result = await apiCall('filter', 'GET', null, query);
+    if (result !== null) {
+      return result;
+    }
+  }
+  
+  // Fallback to localStorage
   const items = readStorage();
   const entries = Object.entries(query || {});
   if (!entries.length) return items;
@@ -70,11 +128,32 @@ const filterItems = async (query = {}) => {
 
 const getItem = async (id) => {
   if (!id) return null;
+  
+  if (!useLocalStorage) {
+    const result = await apiCall('get', 'GET', null, { id });
+    if (result !== null) {
+      return result;
+    }
+  }
+  
+  // Fallback to localStorage
   const items = readStorage();
   return items.find((item) => item.id === id) || null;
 };
 
 const createItem = async (data) => {
+  if (!useLocalStorage) {
+    const result = await apiCall('create', 'POST', data);
+    if (result !== null) {
+      // Also sync to localStorage
+      const current = readStorage();
+      current.unshift(result);
+      writeStorage(current);
+      return result;
+    }
+  }
+  
+  // Fallback to localStorage only
   const current = readStorage();
   const item = normalizeItem(data);
   current.unshift(item);
@@ -83,6 +162,21 @@ const createItem = async (data) => {
 };
 
 const updateItem = async (id, payload) => {
+  if (!useLocalStorage) {
+    const result = await apiCall('update', 'POST', payload, { id });
+    if (result !== null) {
+      // Also sync to localStorage
+      const current = readStorage();
+      const index = current.findIndex((item) => item.id === id);
+      if (index !== -1) {
+        current[index] = result;
+        writeStorage(current);
+      }
+      return result;
+    }
+  }
+  
+  // Fallback to localStorage
   const current = readStorage();
   const index = current.findIndex((item) => item.id === id);
   if (index === -1) {
@@ -94,6 +188,18 @@ const updateItem = async (id, payload) => {
 };
 
 const deleteItem = async (id) => {
+  if (!useLocalStorage) {
+    const result = await apiCall('delete', 'DELETE', null, { id });
+    if (result !== null) {
+      // Also sync to localStorage
+      const current = readStorage();
+      const newItems = current.filter((item) => item.id !== id);
+      writeStorage(newItems);
+      return result;
+    }
+  }
+  
+  // Fallback to localStorage
   const current = readStorage();
   const newItems = current.filter((item) => item.id !== id);
   writeStorage(newItems);
